@@ -1,9 +1,17 @@
-const OpenAI = require('openai');
+const Groq = require('groq-sdk');
 
 class OrderAssistant {
     constructor() {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+        console.log('Initializing Groq with key:', process.env.GROQ_API_KEY ? 'Key found' : 'NO KEY FOUND!');
+        
+        if (!process.env.GROQ_API_KEY) {
+            console.error('GROQ_API_KEY is missing!');
+            this.groq = null;
+            return;
+        }
+
+        this.groq = new Groq({
+            apiKey: process.env.GROQ_API_KEY,
         });
         
         // Store conversation history for each user
@@ -12,6 +20,11 @@ class OrderAssistant {
 
     async processMessage(senderId, message, businessContext = {}) {
         try {
+            // Check if Groq is initialized
+            if (!this.groq) {
+                throw new Error('Groq not initialized - missing API key');
+            }
+
             // Get or create conversation history
             if (!this.conversations.has(senderId)) {
                 this.conversations.set(senderId, []);
@@ -28,20 +41,26 @@ class OrderAssistant {
             // Create system prompt based on business type
             const systemPrompt = this.createSystemPrompt(businessContext);
             
-            // Create messages array for OpenAI
+            // Create messages array for Groq
             const messages = [
                 { role: 'system', content: systemPrompt },
                 ...history.slice(-10) // Keep last 10 messages for context
             ];
 
-            const completion = await this.openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
+            console.log('Sending request to Groq...');
+
+            const completion = await this.groq.chat.completions.create({
+                model: "llama-3.3-70b-versatile",
                 messages: messages,
-                max_tokens: 500,
                 temperature: 0.7,
+                max_tokens: 500,
+                top_p: 1,
+                stream: false, // We'll use non-streaming for simplicity
+                stop: null,
             });
 
             const aiResponse = completion.choices[0].message.content;
+            console.log('Groq response received:', aiResponse);
             
             // Add AI response to history
             history.push({
@@ -59,12 +78,28 @@ class OrderAssistant {
             };
 
         } catch (error) {
-            console.error('AI Error:', error);
-            return {
-                response: "I'm sorry, I'm having trouble right now. Please try again or contact us directly.",
-                orderData: null,
-                isOrderComplete: false
-            };
+            console.error('Groq AI Error:', error);
+            
+            // More specific error messages
+            if (error.status === 401) {
+                return {
+                    response: "Configuration error: Invalid API key. Please contact support.",
+                    orderData: null,
+                    isOrderComplete: false
+                };
+            } else if (error.status === 429) {
+                return {
+                    response: "I'm currently at capacity. Please try again in a few minutes.",
+                    orderData: null,
+                    isOrderComplete: false
+                };
+            } else {
+                return {
+                    response: `I'm experiencing technical difficulties: ${error.message}. Please try again or contact us directly.`,
+                    orderData: null,
+                    isOrderComplete: false
+                };
+            }
         }
     }
 
