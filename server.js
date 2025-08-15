@@ -299,7 +299,7 @@ app.listen(PORT, () => {
 });
     console.log(`🚀 AI Order Assistant running on port ${PORT}`);
     console.log('🔧 Checking configuration...');
-    console.log('OpenAI API:', process.env.OPENAI_API_KEY ? '✅ Connected' : '❌ Missing OPENAI_API_KEY');
+    console.log('GROQ:', process.env.GROQ_API_KEY ? '✅ Connected' : '❌ Missing GROQ_API_KEY');
     console.log('Google Sheets:', process.env.GOOGLE_SHEET_ID ? '✅ Connected' : '❌ Missing GOOGLE_SHEET_ID');
     console.log('Facebook:', process.env.PAGE_ACCESS_TOKEN ? '✅ Connected' : '❌ Missing PAGE_ACCESS_TOKEN');
 });
