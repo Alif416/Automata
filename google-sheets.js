@@ -1,4 +1,3 @@
-const { GoogleSpreadsheet } = require('googleapis').sheets;
 const { google } = require('googleapis');
 
 class SheetsManager {
